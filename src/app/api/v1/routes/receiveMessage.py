@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks
 
 from src.app.api.dependecy.deps import (
     getRceiveMessagePayload,
@@ -13,7 +13,12 @@ from src.app.schemas.healthCheckSchemas import healthCheckResponse
 router = APIRouter()
 
 @router.post("/receive/message/whatsApp")
-async def receiveMessageAPI(copilotService: CoPilotServices = Depends(getCoPilotService), receivedPayload: dict = Depends(getRceiveMessagePayload)):
+async def receiveMessageAPI(
+    backgroundTasks: BackgroundTasks,
+    copilotService: CoPilotServices = Depends(getCoPilotService), 
+    receivedPayload: dict = Depends(getRceiveMessagePayload),
+    
+    ):
 
     sessionID = copilotService.getSessionId(receivedPayload)
     print("---------------------------")
@@ -21,9 +26,7 @@ async def receiveMessageAPI(copilotService: CoPilotServices = Depends(getCoPilot
     humanMessage = copilotService.getHumanMessage(receivedPayload)
     client = await copilotService.startClient()
     newSession = await copilotService.checkSessionExists(client, sessionID)
-    response = await copilotService.talkToCoPilot(client, sessionID, humanMessage)
-
-    print(response.data.content)
+    backgroundTasks.add_task(copilotService.talkToCoPilot, client, sessionID, humanMessage)
 
     return healthCheckResponse(status="Received", message="Recieved payload")
 

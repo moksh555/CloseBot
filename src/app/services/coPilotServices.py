@@ -36,5 +36,7 @@ class CoPilotServices:
         print(sessionID)
         session = await client.resume_session(sessionID)
         response = await session.send_and_wait({"prompt": humanMessage})
+        print(response)
+        print(response.data.content)
         return response
 
