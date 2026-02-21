@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+
 from src.app.api.dependecy.deps import (
     getRceiveMessagePayload,
     getCoPilotService
@@ -15,12 +16,14 @@ router = APIRouter()
 async def receiveMessageAPI(copilotService: CoPilotServices = Depends(getCoPilotService), receivedPayload: dict = Depends(getRceiveMessagePayload)):
 
     sessionID = copilotService.getSessionId(receivedPayload)
+    print("---------------------------")
+    print(sessionID)
     humanMessage = copilotService.getHumanMessage(receivedPayload)
-    
-    newSession = await copilotService.checkNewSession(sessionID)
-    response = await copilotService.talkToCoPilot(sessionID, humanMessage)
+    client = await copilotService.startClient()
+    newSession = await copilotService.checkSessionExists(client, sessionID)
+    response = await copilotService.talkToCoPilot(client, sessionID, humanMessage)
 
-    print(response)
+    print(response.data.content)
 
     return healthCheckResponse(status="Received", message="Recieved payload")
 
