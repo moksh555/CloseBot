@@ -24,7 +24,7 @@ async def receiveMessageAPI(
     print("---------------------------")
     print(sessionID)
     humanMessage = copilotService.getHumanMessage(receivedPayload)
-    client = await copilotService.startClient()
+    # client = await copilotService.startClient()
     # newSession = await copilotService.checkSessionExists(client, sessionID)
     backgroundTasks.add_task(copilotService.talkToCoPilot, client, sessionID, humanMessage)
 
