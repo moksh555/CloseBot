@@ -14,6 +14,3 @@ app.include_router(mainApiRouter, prefix="/agents")
 @app.get("/")
 def root() -> healthCheckResponse:
     return healthCheckResponse(status = "Live", message="Your app is Live and running")
-
-
-
