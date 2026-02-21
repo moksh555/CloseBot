@@ -40,7 +40,7 @@ class CoPilotServices:
         print(response.data.content)
         return response
     
-    def test(self,client, sessionID, humanMessage):
+    def test(self, sessionID, humanMessage):
         print(sessionID)
         print(humanMessage)
         print("----------------------")
