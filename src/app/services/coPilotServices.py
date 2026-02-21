@@ -31,12 +31,20 @@ class CoPilotServices:
     def getHumanMessage(self, payload:dict) -> str:
         return payload["entry"][0]["changes"][0]["value"]["messages"][0]["text"]["body"]
     
-    async def talkToCoPilot(self, client, sessionID, humanMessage):
+    def talkToCoPilot(self, client, sessionID, humanMessage):
         print("---------------------------")
         print(sessionID)
-        session = await client.resume_session(sessionID)
-        response = await session.send_and_wait({"prompt": humanMessage})
+        session = client.resume_session(sessionID)
+        response = session.send_and_wait({"prompt": humanMessage})
         print(response)
         print(response.data.content)
         return response
+    
+    def test(self,client, sessionID, humanMessage):
+        print(sessionID)
+        print(humanMessage)
+        print("----------------------")
+        return True
+
+    
 
