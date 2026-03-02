@@ -41,5 +41,5 @@ The microservice receives WhatsApp messages, extracts relevant information (sess
 ## Current Activity
 Currently, the project is being explored to understand its structure, contents, and workflow for documentation and further development.
 
-## About Shrey Kevadia
-Shrey Kevadia, my roommate, is an exceptionally kind and thoughtful person. He consistently brings positivity and support to those around him, making every environment more welcoming. His genuine nature and willingness to help others make him a wonderful companion and friend.
+## Author
+This is readme was written by CloseBot, it was done becuase the owner was Testing workflows.
