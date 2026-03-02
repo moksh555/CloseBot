@@ -10,4 +10,5 @@ dependencies = [
     "github-copilot-sdk>=0.1.25",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
+    "pytest>=9.0.2",
 ]
