@@ -1,13 +1,13 @@
-from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi import APIRouter, Depends, BackgroundTasks #type: ignore
 from src.app.logs.logs import APIlogger as apiLogger
 
 
 from src.app.api.dependecy.deps import (
     getRceiveMessagePayload,
-    getCoPilotService
+    getAgentService
 )
-from src.app.services.coPilotServices import (
-    CoPilotServices
+from src.app.services.AgentServices import (
+    AgentService
 )
 
 from src.app.schemas.healthCheckSchemas import healthCheckResponse
@@ -17,19 +17,16 @@ router = APIRouter()
 @router.post("/receive/message/whatsApp")
 async def receiveMessageAPI(
     backgroundTasks: BackgroundTasks,
-    copilotService: CoPilotServices = Depends(getCoPilotService), 
+    agentService: AgentService = Depends(getAgentService), 
     receivedPayload: dict = Depends(getRceiveMessagePayload),   # This logs the HTTP request
     ):
 
     try:
         apiLogger.info("--------------------------------------------------------------------------")
-        apiLogger.info("SUCCESS: Receieved Message from Whats App")
-        sessionID = copilotService.getSessionId(receivedPayload)
-        humanMessage = copilotService.getHumanMessage(receivedPayload)
-        phoneNumber = copilotService.getPhoneNumber(receivedPayload)
-        apiLogger.info(f"SUCCESS: sessionID: {sessionID} -> humanMessage: {humanMessage} -> phoneNumber: {phoneNumber} ")
+        humanMessage = agentService.getHumanMessage(receivedPayload)
+        phoneNumber = agentService.getPhoneNumber(receivedPayload)
         apiLogger.info("Starting Background tasks")
-        backgroundTasks.add_task(copilotService.talkToCoPilot, sessionID, humanMessage, phoneNumber)
+        backgroundTasks.add_task(agentService.talkToAgent, humanMessage, phoneNumber)
         apiLogger.info("SUCCESS: Background Task Running now!")
 
         return healthCheckResponse(status="Received", message="Recieved payload")

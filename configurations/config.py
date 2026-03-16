@@ -7,12 +7,11 @@ ENV_FILE_PATH = CURRENT_FOLDER / ".env"
 class Settings(BaseSettings):
     
 
-    GH_TOKEN: str
+    ANTHROPIC_API_KEY: str
     WHATS_APP_SEND_MESSAGE_URL: str
     LOCAL_FILE_MCP_SERVER: str
-    LOCAL_FILE_SECRET_TOKEN: str
-    SESSION_ID: str
-    CODER_SKILLS: str = str(Path(__file__).parent / "skills" / "coder")
+    GMAIL_MCP_SERVER: str
+    CALENDAR_MCP_SERVER: str
 
 
     model_config = SettingsConfigDict(

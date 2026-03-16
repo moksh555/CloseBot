@@ -1,15 +1,15 @@
-from fastapi import Request
-from src.app.services.coPilotServices import CoPilotServices
+from fastapi import Request #type: ignore
+from src.app.services.AgentServices import AgentService
 
-COPILOT_INSTANCE = None
+AGENT_INSTANCE = None
 
 async def getRceiveMessagePayload(request: Request):
     return await request.json()
 
-def getCoPilotService():
-    global COPILOT_INSTANCE
+def getAgentService():
+    global AGENT_INSTANCE
 
-    if COPILOT_INSTANCE is None:
-        COPILOT_INSTANCE = CoPilotServices()
-    return COPILOT_INSTANCE
+    if AGENT_INSTANCE is None:
+        AGENT_INSTANCE = AgentService()
+    return AGENT_INSTANCE
 
