@@ -12,7 +12,11 @@ class Settings(BaseSettings):
     LOCAL_FILE_MCP_SERVER: str
     GMAIL_MCP_SERVER: str
     CALENDAR_MCP_SERVER: str
-
+    GITHUB_MCP_SERVER: str
+    LANGSMITH_TRACING:str
+    LANGSMITH_ENDPOINT:str
+    LANGSMITH_API_KEY: str
+    LANGSMITH_PROJECT: str
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE_PATH,

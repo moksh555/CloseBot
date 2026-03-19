@@ -1,17 +1,25 @@
 
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel #type: ignore
 from configurations.config import settings
-import httpx
+import httpx, json #type: ignore
 from src.app.mcpServers.mcpConfig import mcpServers
 from src.app.logs.logs import ServiceLogger as serviceLogger
 from claude_agent_sdk import ClaudeSDKClient, ClaudeAgentOptions,AssistantMessage, TextBlock, ResultMessage #type: ignore
-
+import os
 CURRENT_FILE_PATH = Path(__file__).parent.absolute()
 
 class whatsappServicePayload(BaseModel):
     toNumber: str
     text: str
+
+from langsmith.integrations.claude_agent_sdk import configure_claude_agent_sdk #type: ignore
+
+os.environ["LANGSMITH_TRACING"] = settings.LANGSMITH_TRACING
+os.environ["LANGSMITH_API_KEY"] = settings.LANGSMITH_API_KEY
+os.environ["LANGSMITH_PROJECT"] = settings.LANGSMITH_PROJECT
+os.environ["LANGSMITH_ENDPOINT"] = settings.LANGSMITH_ENDPOINT
+
 
 class AgentService:
 
@@ -23,6 +31,8 @@ class AgentService:
     #     return cls._instance
     
     def __init__(self) -> None:
+
+        configure_claude_agent_sdk()
         options = ClaudeAgentOptions(
             max_turns = 30,
             permission_mode="bypassPermissions",
@@ -32,9 +42,10 @@ class AgentService:
             "ANTHROPIC_API_KEY": settings.ANTHROPIC_API_KEY
             },
             mcp_servers=mcpServers,
-            allowed_tools=["mcp__Moksh-Laptop__*"]
+            allowed_tools=["mcp__Moksh-Laptop__*","mcp__Gmail__*","mcp__Google-Calender__*", "mcp__GitHub__*"]
         )
         self.client = ClaudeSDKClient(options)
+        
         
         
     
@@ -45,7 +56,8 @@ class AgentService:
         return payload["entry"][0]["changes"][0]["value"]["messages"][0]["text"]["body"]
     
     async def talkToAgent(self, humanMessage: str, phoneNumber: str):    
-        await self.client.connect()        
+        await self.client.connect()       
+
         async with self.client as agent:
             await agent.query(humanMessage)
 
@@ -66,9 +78,9 @@ class AgentService:
                         print(f"Stopped: {message.subtype}")
                     if message.total_cost_usd is not None:
                         print(f"Cost: ${message.total_cost_usd:.4f}")
-        self.client.disconnect()        
+        await self.client.disconnect()        
 
-    async def sendMessagetoWhatsApp(self, agentResponse: str, phoneNumber: str, agentQuestion: bool):
+    async def sendMessagetoWhatsAppFromAgent(self, agentResponse: str, phoneNumber: str, agentQuestion: bool):
         payload = {
             "toNumber": phoneNumber,
             "text": agentResponse
@@ -79,7 +91,7 @@ class AgentService:
             serviceLogger.info(f"SUCCESS: function->sendMessagetoWhatsApp, Sending Result Question POST to {settings.WHATS_APP_SEND_MESSAGE_URL}")
         try:
             async with httpx.AsyncClient() as client:
-                httpResponse = await client.post(settings.WHATS_APP_SEND_MESSAGE_URL, json=payload, timeout=30.0)
+                httpResponse = await client.post(settings.WHATS_APP_SEND_MESSAGE_URL, json=payload)
                 httpResponse.raise_for_status() # Raise error if status is 4xx or 5xx
                 return httpResponse.json()
         except Exception as e:

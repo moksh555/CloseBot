@@ -16,4 +16,8 @@ mcpServers = {
       "type": "http",
       "url": settings.CALENDAR_MCP_SERVER,
     },
+    "GitHub": {
+      "type": "http",
+      "url": settings.GITHUB_MCP_SERVER,
+    }
 }
