@@ -1,127 +1,110 @@
-# CloseBot — Agent Service Microservice
+# 🤖 CloseBot — WhatsApp AI Agent Microservice
 
-## Overview
+CloseBot is a **FastAPI microservice** that receives incoming WhatsApp messages via webhook, processes them through **Anthropic's Claude Agent SDK**, and sends AI-generated responses back over WhatsApp. The agent has real-world tool access via MCP (Model Context Protocol) servers — including local file system, Gmail, and Google Calendar — enabling it to perform autonomous, multi-step tasks driven entirely by natural language messages.
 
-CloseBot is a **FastAPI-based AI Agent microservice** that receives WhatsApp messages and responds to them intelligently using **Anthropic's Claude Agent SDK**. The service integrates with multiple external tools via MCP (Model Context Protocol) servers, enabling the agent to read/write files, manage emails, and interact with Google Calendar — all autonomously.
+## What It Does
 
-> **Migration Notice:** This project was originally built on the **GitHub Copilot SDK** and has been fully migrated to the **Claude Agent SDK** (`claude-agent-sdk >= 0.1.48`). The agent now runs with multi-turn conversation support, MCP tool integration, and permission bypass mode for autonomous operation.
-
----
-
-## What This Project Does
-
-1. **Receives WhatsApp messages** via a webhook endpoint (`POST /agents/receive/message/whatsApp`).
-2. **Extracts message data** — phone number, session ID, and message body — from the incoming payload.
-3. **Passes the message to a Claude Agent** which processes it with access to integrated MCP tools.
-4. **Sends the AI-generated response** back to the user over WhatsApp via an external messaging API.
-5. All operations run **asynchronously** with background task processing and graceful error handling.
-
----
+1. Receives a WhatsApp message at `POST /agents/receive/message/whatsApp`
+2. Extracts the sender's phone number and message text from the webhook payload
+3. Dispatches the message to a Claude agent as an async background task
+4. The agent reasons over the message, uses MCP tools (files, email, calendar) as needed, and produces a response (up to 30 turns)
+5. Sends the agent's response back to the user via a downstream WhatsApp messaging service
 
 ## Key Features
 
-- **FastAPI REST API** with async support
-- **WhatsApp message reception and response** via webhook
-- **AI-powered responses using Claude Agent SDK** (migrated from GitHub Copilot SDK)
-- **MCP Server Integration** for real-world tool use (files, Gmail, Google Calendar)
-- **Multi-turn conversations** (up to 30 turns per session)
-- **Session management** and background task execution
-- **Dockerised** with multi-stage build using `uv` for fast dependency management
-- **Pydantic-based configuration** with environment variable support
-
----
+- **FastAPI REST API** with async background task processing for non-blocking response handling
+- **Claude Agent SDK** integration (`claude-agent-sdk >= 0.1.48`) with multi-turn conversation support, `bypassPermissions` mode, and configurable effort level
+- **MCP Server Integration** — three external tool servers wired in: local filesystem, Gmail, and Google Calendar
+- **Structured logging** — separate file-based loggers for API layer and service layer (`allLogs/apiLogs.log`, `allLogs/serviceLogs.log`)
+- **Pydantic-based configuration** loaded from a `.env` file with strict type validation
+- **Dockerized** via a two-stage build using `uv` for fast, reproducible dependency management; includes GitHub CLI installed at build time
+- **Secure token hashing** — local MCP server secret tokens are SHA-256 hashed before use
 
 ## MCP Servers Integrated
 
-The agent has access to the following MCP (Model Context Protocol) servers, enabling it to interact with real-world services:
+| Server Name | Transport | Purpose |
+|---|---|---|
+| `Moksh-Laptop` | HTTP | Local filesystem — read/write files on the host machine |
+| `Gmail` | HTTP | Email — search, read, and send Gmail messages |
+| `Google-Calender` | HTTP | Calendar — check availability, create, search, and patch Google Calendar events |
 
-| MCP Server | Description |
-|---|---|
-| **Moksh-Laptop** | Local file system access — read, write, and manage files on the host machine |
-| **Gmail** | Email integration — search, read, and send emails via Gmail |
-| **Google-Calender** | Calendar integration — check availability, create, search, and update Google Calendar events |
-
-MCP server URLs are configured via environment variables (`LOCAL_FILE_MCP_SERVER`, `GMAIL_MCP_SERVER`, `CALENDAR_MCP_SERVER`).
-
----
-
-## Directory Structure
-
-```
-CloseBot/
-├── main.py                          # FastAPI application entry point
-├── pyproject.toml                   # Project dependencies and metadata
-├── Dockerfile                       # Multi-stage Docker build
-├── configurations/
-│   └── config.py                    # Pydantic settings & environment config
-└── src/app/
-    ├── api/v1/routes/
-    │   └── receiveMessage.py        # WhatsApp webhook endpoint
-    ├── services/
-    │   ├── AgentServices.py         # Core Claude Agent SDK integration
-    │   └── WhatsAppServices.py      # WhatsApp outbound messaging
-    ├── mcpServers/
-    │   ├── mcpConfig.py             # MCP server definitions (Laptop, Gmail, Calendar)
-    │   └── mcpConfigServices.py     # MCP helper utilities
-    └── schemas/                     # Pydantic request/response models
-```
-
----
-
-## How It Works
-
-```
-WhatsApp User
-     │
-     ▼
-POST /agents/receive/message/whatsApp
-     │
-     ▼
-AgentServices.py  ──►  Claude Agent SDK
-                              │
-              ┌───────────────┼───────────────┐
-              ▼               ▼               ▼
-        Moksh-Laptop        Gmail       Google Calendar
-        (Local Files)      (Email)       (Events)
-              │               │               │
-              └───────────────┼───────────────┘
-                              │
-                              ▼
-                    Response generated
-                              │
-                              ▼
-                   WhatsApp reply sent back
-```
-
----
+MCP server URLs are injected via environment variables at runtime.
 
 ## Tech Stack
 
 | Technology | Purpose |
 |---|---|
-| **FastAPI** | REST API framework |
-| **Claude Agent SDK** (`claude-agent-sdk`) | AI agent with tool use |
-| **FastMCP** (`fastmcp`) | MCP server communication |
-| **Pydantic / Pydantic-Settings** | Data validation & config |
-| **Docker + uv** | Containerisation & dependency management |
+| **FastAPI** | Async REST API framework |
+| **Claude Agent SDK** (`claude-agent-sdk`) | Anthropic AI agent with MCP tool use |
+| **FastMCP** (`fastmcp`) | MCP protocol client/server communication |
+| **httpx** | Async HTTP client for outbound WhatsApp requests |
+| **Pydantic / pydantic-settings** | Data validation and `.env`-based settings management |
 | **Python 3.10+** | Runtime |
+| **Docker + uv** | Multi-stage containerization and dependency management |
 
----
+## Project Structure
+
+```
+CloseBot/
+├── main.py                              # FastAPI app entry point; registers /agents router
+├── pyproject.toml                       # Dependencies (uv/pip)
+├── Dockerfile                           # Two-stage Docker build
+├── configurations/
+│   ├── config.py                        # Pydantic Settings — reads from .env
+│   └── .env                             # Environment variables (not committed)
+└── src/app/
+    ├── api/v1/routes/
+    │   └── receiveMessage.py            # POST /agents/receive/message/whatsApp
+    ├── services/
+    │   └── AgentServices.py             # Claude Agent SDK: connect, query, stream responses
+    ├── mcpServers/
+    │   ├── mcpConfig.py                 # MCP server map (Laptop, Gmail, Calendar)
+    │   └── mcpConfigServices.py         # SHA-256 token hashing for local MCP auth
+    ├── logs/
+    │   └── logs.py                      # Dual file-based logger setup
+    └── schemas/
+        └── healthCheckSchemas.py        # Pydantic response models
+```
+
+## Architecture Flow
+
+```
+WhatsApp User
+      │
+      ▼
+POST /agents/receive/message/whatsApp
+      │  (returns 200 immediately)
+      ▼
+BackgroundTask: AgentService.talkToAgent()
+      │
+      ▼
+ClaudeSDKClient ──► Claude Agent (up to 30 turns)
+                          │
+          ┌───────────────┼───────────────┐
+          ▼               ▼               ▼
+    Moksh-Laptop        Gmail       Google Calendar
+    (Local Files)      (Email)       (Events)
+          └───────────────┼───────────────┘
+                          │
+                          ▼
+              AgentService.sendMessagetoWhatsApp()
+                          │
+                          ▼
+                   WhatsApp reply sent
+```
 
 ## Environment Variables
 
-Create a `configurations/.env` file with the following:
+Create `configurations/.env` with:
 
 ```env
 ANTHROPIC_API_KEY=your_anthropic_api_key
-WHATS_APP_SEND_MESSAGE_URL=your_whatsapp_api_url
-LOCAL_FILE_MCP_SERVER=http://your-local-mcp-server-url
-GMAIL_MCP_SERVER=http://your-gmail-mcp-server-url
-CALENDAR_MCP_SERVER=http://your-calendar-mcp-server-url
-LOCAL_FILE_SECRET_TOKEN=your_secret_token
+WHATS_APP_SEND_MESSAGE_URL=http://your-whatsapp-service/send
+LOCAL_FILE_MCP_SERVER=http://your-local-mcp-server
+GMAIL_MCP_SERVER=http://your-gmail-mcp-server
+CALENDAR_MCP_SERVER=http://your-calendar-mcp-server
+LOCAL_FILE_SECRET_TOKEN=your_local_mcp_secret_token
 ```
-
----
 
 ## Getting Started
 
@@ -131,41 +114,45 @@ LOCAL_FILE_SECRET_TOKEN=your_secret_token
    cd CloseBot
    ```
 
-2. **Set up environment variables** — copy and fill in `configurations/.env`
+2. **Create the environment file**
+   ```bash
+   cp configurations/.env.example configurations/.env
+   # Fill in your API keys and MCP server URLs
+   ```
 
-3. **Install dependencies**
+3. **Install dependencies with uv**
    ```bash
    pip install uv
    uv sync
    ```
 
-4. **Run the FastAPI server**
+4. **Run the server**
    ```bash
-   uvicorn main:app --reload
+   uvicorn main:app --reload --port 8000
    ```
 
-5. **Or run with Docker**
+5. **Run with Docker**
    ```bash
    docker build -t closebot .
-   docker run --env-file configurations/.env -p 8000:8000 closebot
+   docker run --env-file configurations/.env -p 8080:8080 closebot
    ```
 
----
+## API Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/` | Health check — returns `{"status": "Live"}` |
+| `POST` | `/agents/receive/message/whatsApp` | Receives WhatsApp webhook payload; triggers agent in background |
+
+## Running Tests
+
+```bash
+uv run pytest
+```
 
 ## Use Cases
 
-- **Customer support automation** over WhatsApp
-- **AI-powered personal assistant** with calendar and email access
-- **Autonomous task execution** via natural language WhatsApp messages
-- **AI-driven project management** assistant
-
----
-
-## Migration Note
-
-This service was originally powered by the **GitHub Copilot SDK** for AI response generation. It has since been **fully migrated to Anthropic's Claude Agent SDK**, which provides:
-
-- Native MCP (Model Context Protocol) server support
-- Multi-turn agentic conversations
-- Tool use with permission bypass for autonomous workflows
-- Superior context handling and reasoning capabilities
+- AI-powered WhatsApp personal assistant with calendar and email access
+- Customer support automation via WhatsApp
+- Autonomous task execution through natural language (e.g., "Schedule a meeting tomorrow at 3pm and send an email confirmation")
+- Agentic workflow orchestration triggered from mobile
